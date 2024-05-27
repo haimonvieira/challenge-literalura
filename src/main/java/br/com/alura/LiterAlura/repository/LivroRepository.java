@@ -13,4 +13,9 @@ public interface LivroRepository extends JpaRepository<Livro, Long> {
     @Query("SELECT l FROM Livro l WHERE l.idioma = :idioma")
     List<Livro> buscarLivroPorIdioma(String idioma);
 
+    //Pesquisa o livro para saber se já existe no BD; Transforma o titulo em case-sensitive
+    @Query("SELECT l FROM Livro l WHERE LOWER(l.titulo) = LOWER(:titulo)")
+    Optional<Livro> findByTitulo(String titulo);
+
+    List<Livro> findTop10ByOrderByQuantidadeDownloadsDesc();
 }

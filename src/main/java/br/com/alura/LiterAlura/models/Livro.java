@@ -1,8 +1,6 @@
 package br.com.alura.LiterAlura.models;
 
-import br.com.alura.LiterAlura.services.ConverterDados;
 import jakarta.persistence.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;

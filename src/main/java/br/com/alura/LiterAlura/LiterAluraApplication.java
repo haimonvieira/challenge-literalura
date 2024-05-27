@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class LiterAluraApplication implements CommandLineRunner {
 
+	//Injetando DatabaseService
 	@Autowired
 	private LivroRepository livroRepository;
 	@Autowired

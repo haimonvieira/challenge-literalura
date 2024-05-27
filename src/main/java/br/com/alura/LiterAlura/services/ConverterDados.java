@@ -17,7 +17,7 @@ public class ConverterDados implements IConverteDados{
 
     }
 
-    public static String obterIdioma(String abreviacao){
+    public static String converterAbreviacao(String abreviacao){
 
         if(abreviacao.equalsIgnoreCase("pt")){
             return "Português";

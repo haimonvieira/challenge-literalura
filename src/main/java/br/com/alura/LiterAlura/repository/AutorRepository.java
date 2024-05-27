@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface AutorRepository extends JpaRepository<Autor, Long> {
 
@@ -15,4 +16,13 @@ public interface AutorRepository extends JpaRepository<Autor, Long> {
     //a.anoFalecimento > 1800
     @Query("SELECT a FROM Autor a WHERE a.anoFalecimento > :ano AND a.anoNascimento <= :ano")
     List<Autor> buscarAutoresAte(int ano);
+
+    @Query("SELECT a FROM Autor a WHERE LOWER(a.nome) = LOWER(:nome)")
+    Optional<Autor> findByNome(String nome);
+
+    @Query("SELECT a FROM Autor a WHERE LOWER(a.nome) = LOWER(:nome)")
+    Autor buscarAutor(String nome);
+
+
+
 }

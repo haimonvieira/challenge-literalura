@@ -6,16 +6,13 @@ import br.com.alura.LiterAlura.repository.LivroRepository;
 import br.com.alura.LiterAlura.services.ConsumoAPI;
 import br.com.alura.LiterAlura.services.ConverterDados;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Scanner;
+import java.util.*;
 
 public class Main {
     private final Scanner scanner = new Scanner(System.in);
     private final ConsumoAPI consumoAPI = new ConsumoAPI();
     private final ConverterDados converterDados = new ConverterDados();
-    private final String ENDERECO = "https://gutendex.com/books/";
+    private final String ENDERECO = "https://gutendex.com/books/?search=";
     private LivroRepository livroRepository;
     private AutorRepository autorRepository;
     private List<Livro> livros = new ArrayList<>();
@@ -35,12 +32,23 @@ public class Main {
         while (op != 0) {
 
             System.out.println("""
-                    1- Inserir livro
+                    ----CADASTRO----
+                    1- Cadastrar livro
+                                        
+                    ----LISTAR----
                     2- Listar livros cadastrados
                     3- Listar autores cadastrados
-                    4- Listar autores de um determinado ano
-                    5- Listar livros de um determinado idioma
-                    6- Deletar tudo
+                    4- Listar 10 livros mais baixados
+                                        
+                    ----BUSCAR----
+                    5- Buscar autores de um determinado ano
+                    6- Buscar livros de um determinado idioma
+                    7- Buscar livro por titulo
+                    8- Buscar autor
+                                        
+                    ----ZONA DE PERIGO----
+                    9- Deletar tudo (deleta registros de autores e livros)
+                    ----------------------
                                     
                     0- SAIR
                     """);
@@ -51,7 +59,7 @@ public class Main {
             switch (op) {
 
                 case 1:
-                    buscarLivro();
+                    inserirLivro();
                     break;
 
                 case 2:
@@ -63,17 +71,28 @@ public class Main {
                     break;
 
                 case 4:
-                    listarAutoresDeUmDeterminadoAno();
+                    listarTop10LivrosBaixados();
                     break;
 
                 case 5:
-                    listarLivrosDeUmDeterminadoIdioma();
+                    listarAutoresDeUmDeterminadoAno();
                     break;
 
                 case 6:
-                    deletarTudo();
+                    listarLivrosDeUmDeterminadoIdioma();
                     break;
 
+                case 7:
+                    buscarLivroPorTitulo();
+                    break;
+
+                case 8:
+                    buscarAutor();
+                    break;
+
+                case 9:
+                    deletarTudo();
+                    break;
 
                 case 0:
                     System.out.println("Saindo...");
@@ -96,61 +115,94 @@ public class Main {
      * listar autores - FEITO
      * listar autores de um determinado ano - FEITO
      * listar livros de um determinado idioma - FEITO
-     * Fazer validacoes
+     * Top 10 livros baixados - FEITO
+     * buscar livro por titulo - FEITO
+     * buscar autor - FEITO
+     * Fazer validacoes - FEITO
      */
 
-    private DadosResultado getDadosLivro(String endereco) {
+    private void inserirLivro() {
 
-        var json = consumoAPI.obterDados(ENDERECO + "?search="
-                + endereco.replace(" ", "+"));
+        var pesquisa = "";
 
+        System.out.println("Insira o nome do livro para buscar");
+        System.out.print("> ");
+        pesquisa = scanner.nextLine().toLowerCase();
+
+        cadastrarLivro(pesquisa);
+
+    }
+
+    private DadosResultado getDadosLivro(String pesquisa) {
+
+        System.out.println("Estou fazendo a pesquisa do seu livro...\n");
+
+        var json = consumoAPI.obterDados(ENDERECO +
+                pesquisa.replace(" ", "+"));
         System.out.println(json);
 
-        DadosResultado dadosResultado = converterDados.obterDados(json, DadosResultado.class);
 
-        System.out.println(dadosResultado);
+        DadosResultado dadosResultado = converterDados.obterDados(json, DadosResultado.class);
 
         return dadosResultado;
 
     }
 
-    private void buscarLivro() {
+    private void cadastrarLivro(String pesquisa) {
 
-        System.out.println("Insira o nome do livro para buscar");
-        System.out.print("> ");
-        var pesquisa = scanner.nextLine();
+        if (pesquisa.isEmpty()) {
 
-        DadosResultado dadosResultado = getDadosLivro(pesquisa);
+            System.out.println("Sem dados para fazer a pesquisa.");
 
-        List<DadosLivro> dadosLivros = dadosResultado.dadosLivro().stream()
-                .map(l -> new DadosLivro(l.titulo(), l.quantidadeDownloads(), l.idiomas(),
-                        l.autores()))
-                .toList();
+        } else {
 
-        livros = dadosLivros.stream()
-                .map(Livro::new).toList();
+            Optional<Livro> livroExiste = livroRepository.findByTitulo(pesquisa);
 
-        //Pegando mapeando dadosLivros para DadosAutor
-        List<DadosAutor> dadosAutores = dadosLivros.stream()
-                .map(d -> new DadosAutor(d.autores().get(0).nome(), d.autores().get(0).anoNascimento(),
-                        d.autores().get(0).anoFalecimento()))
-                .toList();
 
-        autores = dadosAutores.stream()
-                .map(Autor::new).toList();
+            if (livroExiste.isPresent()) {
 
-        if (!livros.isEmpty() && !autores.isEmpty()) {
+                System.out.println("\nLivro já existe no BD: " + livroExiste.get());
+                System.out.println("\n");
 
-            //Inserindo o livro para poder apresentar o nome do livro
-            autores.get(0).setLivro(livros.get(0));
-            salvarLivro(dadosLivros, dadosAutores);
+            } else {
 
+                DadosResultado dadosResultado = getDadosLivro(pesquisa);
+
+                System.out.println("Estou convertendo o livro...");
+
+                List<DadosLivro> dadosLivros = dadosResultado.dadosLivro().stream()
+                        .map(l -> new DadosLivro(l.titulo(), l.quantidadeDownloads(), l.idiomas(),
+                                l.autores()))
+                        .toList();
+
+                livros = dadosLivros.stream()
+                        .map(Livro::new).toList();
+
+                //Pegando mapeando dadosLivros para DadosAutor
+                List<DadosAutor> dadosAutores = dadosLivros.stream()
+                        .map(d -> new DadosAutor(d.autores().get(0).nome(), d.autores().get(0).anoNascimento(),
+                                d.autores().get(0).anoFalecimento()))
+                        .toList();
+
+                autores = dadosAutores.stream()
+                        .map(Autor::new).toList();
+
+                if (!livros.isEmpty() && !autores.isEmpty()) {
+
+                    //Inserindo o livro para poder apresentar o nome do livro
+                    autores.get(0).setLivro(livros.get(0));
+                    salvarLivro(dadosLivros, dadosAutores);
+
+                }
+
+            }
         }
-
 
     }
 
     private void salvarLivro(List<DadosLivro> dadosLivros, List<DadosAutor> dadosAutores) {
+
+        System.out.println("Estou inserindo no banco de dados...\n");
 
         Livro livro = new Livro();
         livro.setTitulo(dadosLivros.get(0).titulo());
@@ -167,20 +219,35 @@ public class Main {
         livroRepository.save(livro);
         autorRepository.save(autor);
 
+
+        System.out.println("\nLivro cadastrado com sucesso!\n");
+
     }
 
     private void listarLivrosCadastrados() {
 
         List<Livro> books = livroRepository.findAll();
 
-        System.out.println("----Livros----");
-        books.forEach(l -> System.out.println(
+        if (!books.isEmpty()) {
 
-                "\nTitulo: " + l.getTitulo() +
-                        "\nIdioma: " + ConverterDados.obterIdioma(l.getIdioma()) +
-                        "\nDownloads: " + l.getQuantidadeDownloads()
+            Optional<Livro> livro = livroRepository.findByTitulo(books.get(0).getTitulo());
 
-        ));
+            if (livro.isPresent()) {
+                System.out.println("----Livros----");
+                books.forEach(l -> System.out.println(
+
+                        "\nTitulo: " + l.getTitulo() +
+                                "\nIdioma: " + ConverterDados.converterAbreviacao(l.getIdioma()) +
+                                "\nDownloads: " + l.getQuantidadeDownloads()
+                ));
+                System.out.println();
+            }
+
+        } else {
+
+            System.out.println("\nSem livros cadastrados.\n");
+
+        }
 
     }
 
@@ -188,13 +255,27 @@ public class Main {
 
         List<Autor> autors = autorRepository.findAll();
 
-        System.out.println("----Autores----");
+        if (!autors.isEmpty()) {
 
-        autors.forEach(a -> System.out.println(
-                "\nNome: " + a.getNome() +
-                        "\nNascimento: " + a.getAnoNascimento() +
-                        "\nFalecimento: " + a.getAnoFalecimento()));
-        System.out.println();
+            Optional<Autor> autor = autorRepository.findByNome(autors.get(0).getNome());
+
+            if (autor.isPresent()) {
+
+                System.out.println("----Autores----");
+
+                autors.forEach(a -> System.out.println(
+                        "\nNome: " + a.getNome() +
+                                "\nNascimento: " + a.getAnoNascimento() +
+                                "\nFalecimento: " + a.getAnoFalecimento()));
+                System.out.println();
+
+            }
+
+        } else {
+
+            System.out.println("\nSem autores cadastrados.\n");
+
+        }
 
     }
 
@@ -214,7 +295,7 @@ public class Main {
                 "\nFalecimento: " + a.getAnoFalecimento()
 
         ));
-        System.out.println("\n");
+        System.out.println();
 
     }
 
@@ -229,25 +310,108 @@ public class Main {
         }
 
         List<Livro> books = livroRepository.buscarLivroPorIdioma(idioma);
-
         System.out.println("---Autores com idioma '" + idioma + "'---");
 
         books.forEach(b -> System.out.println(
                 "\nTitulo: " + b.getTitulo() +
-                        "\nIdioma: " + b.getIdioma() +
+                        "\nIdioma: " + ConverterDados.converterAbreviacao(b.getIdioma()) +
                         "\nDownloads: " + b.getQuantidadeDownloads()
+
         ));
+        System.out.println("\nQuantidade de livros: " + books.size());
         System.out.println("\n");
 
 
     }
 
+    private void buscarLivroPorTitulo() {
+
+        System.out.println("Insira o titulo que deseja buscar no BD");
+        System.out.print("> ");
+        var titulo = scanner.nextLine().toLowerCase();
+
+        Optional<Livro> livro = livroRepository.findByTitulo(titulo);
+
+        if (livro.isPresent()) {
+
+            System.out.println("\nAqui está seu livro: \n");
+            System.out.println(livro.get());
+
+        } else {
+
+            System.out.println("""
+                    Não encontramos este livro :(
+                                        
+                    Deseja cadastrá-lo? (S/N)
+                    """);
+            System.out.print("> ");
+            var cadastro = scanner.nextLine();
+
+            if (cadastro.equalsIgnoreCase("s")) {
+
+                cadastrarLivro(titulo);
+
+            }
+
+        }
+
+    }
+
+    private void buscarAutor() {
+
+        System.out.println("Insira o nome do autor");
+        System.out.print("> ");
+        var nome = scanner.nextLine();
+
+        Optional<Autor> buscaAutor = autorRepository.findByNome(nome);
+
+        if (buscaAutor.isPresent()) {
+
+            Autor a = autorRepository.buscarAutor(nome);
+
+            System.out.println(
+
+                    "\nNome: " + a.getNome() +
+                            "\nNascimento: " + a.getAnoNascimento() +
+                            "\nFalecimento: " + a.getAnoFalecimento()
+
+            );
+            System.out.println();
+
+        }
+
+    }
+
+    private void listarTop10LivrosBaixados() {
+
+        List<Livro> books = livroRepository.findTop10ByOrderByQuantidadeDownloadsDesc();
+
+        books.forEach(System.out::println);
+
+        System.out.println();
+
+
+    }
 
     private void deletarTudo() {
 
-        autorRepository.deleteAll();
-        livroRepository.deleteAll();
+        System.out.println("Tem certeza que deseja deletar todos os livros e autores? (S/N)");
+        System.out.print("> ");
+        var decisao = scanner.nextLine();
+
+        if (decisao.equalsIgnoreCase("s")) {
+
+            autorRepository.deleteAll();
+            livroRepository.deleteAll();
+
+        } else {
+
+            System.out.println("\nVoltando...\n");
+
+        }
+
 
     }
+
 }
 
