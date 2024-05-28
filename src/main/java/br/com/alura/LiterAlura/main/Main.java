@@ -13,10 +13,12 @@ public class Main {
     private final ConsumoAPI consumoAPI = new ConsumoAPI();
     private final ConverterDados converterDados = new ConverterDados();
     private final String ENDERECO = "https://gutendex.com/books/?";
-    private LivroRepository livroRepository;
-    private AutorRepository autorRepository;
+    private final LivroRepository livroRepository;
+    private final AutorRepository autorRepository;
     private List<Livro> livros = new ArrayList<>();
     private List<Autor> autores = new ArrayList<>();
+    private Optional<Livro> livroExiste;
+    private Optional<Autor> autorExiste;
 
     public Main(LivroRepository livroRepository, AutorRepository autorRepository) {
 
@@ -45,7 +47,7 @@ public class Main {
                     6- Buscar livros de um determinado idioma
                     7- Buscar livro por titulo
                     8- Buscar autor
-                                        
+                                          
                     ----ZONA DE PERIGO----
                     9- Deletar tudo (deleta registros de autores e livros)
                     ----------------------
@@ -59,7 +61,7 @@ public class Main {
             switch (op) {
 
                 case 1:
-                    inserirLivro();
+                    buscarLivro();
                     break;
 
                 case 2:
@@ -121,7 +123,7 @@ public class Main {
      * Fazer validacoes - FEITO
      */
 
-    private void inserirLivro() {
+    private void buscarLivro() {
 
         var pesquisa = "";
 
@@ -168,10 +170,12 @@ public class Main {
 
                 DadosResultado dadosResultado = getDadosLivro(pesquisa);
 
-                Optional<Autor> autorExiste = autorRepository.findByNome(dadosResultado
-                        .dadosLivro().get(0).autores().get(0).nome());
+                autorExiste = autorRepository.findByNome(dadosResultado
+                        .dadosLivro().get(0).autores().get(0).nome().toLowerCase());
 
                 if (autorExiste.isPresent()) {
+
+                    System.out.println("Autor já existe.");
 
 
                 } else {
@@ -240,9 +244,9 @@ public class Main {
 
         if (!books.isEmpty()) {
 
-            Optional<Livro> livro = livroRepository.findByTitulo(books.get(0).getTitulo());
+            livroExiste = livroRepository.findByTitulo(books.get(0).getTitulo());
 
-            if (livro.isPresent()) {
+            if (livroExiste.isPresent()) {
                 System.out.println("----Livros----");
                 books.forEach(System.out::println);
                 System.out.println();
@@ -262,9 +266,9 @@ public class Main {
 
         if (!autors.isEmpty()) {
 
-            Optional<Autor> autor = autorRepository.findByNome(autors.get(0).getNome());
+            autorExiste = autorRepository.findByNome(autors.get(0).getNome().toLowerCase());
 
-            if (autor.isPresent()) {
+            if (autorExiste.isPresent()) {
 
                 System.out.println("----Autores----");
 
@@ -308,7 +312,7 @@ public class Main {
 
         System.out.println("Insira o idioma (abreviado ou completo)");
         System.out.print("> ");
-        var idioma = scanner.nextLine();
+        var idioma = scanner.nextLine().toLowerCase();
 
         if (idioma.length() > 2) {
             idioma = ConverterDados.converterIdioma(idioma);
@@ -330,12 +334,12 @@ public class Main {
         System.out.print("> ");
         var titulo = scanner.nextLine().toLowerCase();
 
-        Optional<Livro> livro = livroRepository.findByTitulo(titulo);
+        livroExiste = livroRepository.findByTitulo(titulo);
 
-        if (livro.isPresent()) {
+        if (livroExiste.isPresent()) {
 
             System.out.println("\nAqui está seu livro: \n");
-            System.out.println(livro.get());
+            System.out.println(livroExiste.get());
 
         } else {
 
@@ -361,11 +365,11 @@ public class Main {
 
         System.out.println("Insira o nome do autor");
         System.out.print("> ");
-        var nome = scanner.nextLine();
+        var nome = scanner.nextLine().toLowerCase();
 
-        Optional<Autor> buscaAutor = autorRepository.findByNome(nome);
+        autorExiste = autorRepository.findByNome(nome);
 
-        if (buscaAutor.isPresent()) {
+        if (autorExiste.isPresent()) {
 
             Autor a = autorRepository.buscarAutor(nome);
 
@@ -394,7 +398,16 @@ public class Main {
                 .toList();
 
         System.out.println("\n----Top 10 livros mais baixados do Gutendex----");
-        top10Downloads.forEach(System.out::println);
+
+        for(int i = 0; i < top10Downloads.size(); i++){
+
+            System.out.println();
+            System.out.println((i+1) + "- "  + "Titulo: " + top10Downloads.get(i).titulo() +
+                    "\nDownloads: " + top10Downloads.get(i).quantidadeDownloads() +
+                    "\nIdioma: " + ConverterDados.converterAbreviacao(top10Downloads.get(i).idiomas().get(0)));
+
+        }
+
         System.out.println();
 
         List<Livro> books = livroRepository.findTop10ByOrderByQuantidadeDownloadsDesc();
@@ -441,7 +454,6 @@ public class Main {
 
         if (decisao.equalsIgnoreCase("s")) {
 
-            autorRepository.deleteAll();
             livroRepository.deleteAll();
 
         } else {

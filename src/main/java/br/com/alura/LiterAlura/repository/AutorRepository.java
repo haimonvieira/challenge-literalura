@@ -17,7 +17,7 @@ public interface AutorRepository extends JpaRepository<Autor, Long> {
     @Query("SELECT a FROM Autor a WHERE a.anoFalecimento > :ano AND a.anoNascimento <= :ano")
     List<Autor> buscarAutoresAte(int ano);
 
-    @Query("SELECT a FROM Autor a WHERE LOWER(a.nome) = LOWER(:nome)")
+    @Query("SELECT a FROM Autor a WHERE a.nome ILIKE %:nome%")
     Optional<Autor> findByNome(String nome);
 
     @Query("SELECT a FROM Autor a WHERE LOWER(a.nome) = LOWER(:nome)")
