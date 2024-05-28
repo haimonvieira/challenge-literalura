@@ -1,5 +1,6 @@
 package br.com.alura.LiterAlura.models;
 
+import br.com.alura.LiterAlura.services.ConverterDados;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -76,7 +77,7 @@ public class Livro {
     @Override
     public String toString() {
         return "{"+ "\nTitulo: " + titulo +
-                "\nIdioma: " + idioma +
+                "\nIdioma: " + ConverterDados.converterAbreviacao(idioma) +
                 "\nDownloads: " + quantidadeDownloads + "\n}";
     }
 }

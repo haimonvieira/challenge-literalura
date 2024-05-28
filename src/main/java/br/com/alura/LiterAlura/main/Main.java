@@ -12,7 +12,7 @@ public class Main {
     private final Scanner scanner = new Scanner(System.in);
     private final ConsumoAPI consumoAPI = new ConsumoAPI();
     private final ConverterDados converterDados = new ConverterDados();
-    private final String ENDERECO = "https://gutendex.com/books/?search=";
+    private final String ENDERECO = "https://gutendex.com/books/?";
     private LivroRepository livroRepository;
     private AutorRepository autorRepository;
     private List<Livro> livros = new ArrayList<>();
@@ -137,7 +137,7 @@ public class Main {
 
         System.out.println("Estou fazendo a pesquisa do seu livro...\n");
 
-        var json = consumoAPI.obterDados(ENDERECO +
+        var json = consumoAPI.obterDados(ENDERECO + "search=" +
                 pesquisa.replace(" ", "+"));
         System.out.println(json);
 
@@ -168,30 +168,40 @@ public class Main {
 
                 DadosResultado dadosResultado = getDadosLivro(pesquisa);
 
-                System.out.println("Estou convertendo o livro...");
+                Optional<Autor> autorExiste = autorRepository.findByNome(dadosResultado
+                        .dadosLivro().get(0).autores().get(0).nome());
 
-                List<DadosLivro> dadosLivros = dadosResultado.dadosLivro().stream()
-                        .map(l -> new DadosLivro(l.titulo(), l.quantidadeDownloads(), l.idiomas(),
-                                l.autores()))
-                        .toList();
+                if (autorExiste.isPresent()) {
 
-                livros = dadosLivros.stream()
-                        .map(Livro::new).toList();
 
-                //Pegando mapeando dadosLivros para DadosAutor
-                List<DadosAutor> dadosAutores = dadosLivros.stream()
-                        .map(d -> new DadosAutor(d.autores().get(0).nome(), d.autores().get(0).anoNascimento(),
-                                d.autores().get(0).anoFalecimento()))
-                        .toList();
+                } else {
 
-                autores = dadosAutores.stream()
-                        .map(Autor::new).toList();
+                    System.out.println("Estou convertendo o livro...");
 
-                if (!livros.isEmpty() && !autores.isEmpty()) {
+                    List<DadosLivro> dadosLivros = dadosResultado.dadosLivro().stream()
+                            .map(l -> new DadosLivro(l.titulo(), l.quantidadeDownloads(), l.idiomas(),
+                                    l.autores()))
+                            .toList();
 
-                    //Inserindo o livro para poder apresentar o nome do livro
-                    autores.get(0).setLivro(livros.get(0));
-                    salvarLivro(dadosLivros, dadosAutores);
+                    livros = dadosLivros.stream()
+                            .map(Livro::new).toList();
+
+                    //Pegando mapeando dadosLivros para DadosAutor
+                    List<DadosAutor> dadosAutores = dadosLivros.stream()
+                            .map(d -> new DadosAutor(d.autores().get(0).nome(), d.autores().get(0).anoNascimento(),
+                                    d.autores().get(0).anoFalecimento()))
+                            .toList();
+
+                    autores = dadosAutores.stream()
+                            .map(Autor::new).toList();
+
+                    if (!livros.isEmpty() && !autores.isEmpty()) {
+
+                        //Inserindo o livro para poder apresentar o nome do livro
+                        autores.get(0).setLivro(livros.get(0));
+                        salvarLivro(dadosLivros, dadosAutores);
+
+                    }
 
                 }
 
@@ -234,12 +244,7 @@ public class Main {
 
             if (livro.isPresent()) {
                 System.out.println("----Livros----");
-                books.forEach(l -> System.out.println(
-
-                        "\nTitulo: " + l.getTitulo() +
-                                "\nIdioma: " + ConverterDados.converterAbreviacao(l.getIdioma()) +
-                                "\nDownloads: " + l.getQuantidadeDownloads()
-                ));
+                books.forEach(System.out::println);
                 System.out.println();
             }
 
@@ -312,12 +317,7 @@ public class Main {
         List<Livro> books = livroRepository.buscarLivroPorIdioma(idioma);
         System.out.println("---Autores com idioma '" + idioma + "'---");
 
-        books.forEach(b -> System.out.println(
-                "\nTitulo: " + b.getTitulo() +
-                        "\nIdioma: " + ConverterDados.converterAbreviacao(b.getIdioma()) +
-                        "\nDownloads: " + b.getQuantidadeDownloads()
-
-        ));
+        books.forEach(System.out::println);
         System.out.println("\nQuantidade de livros: " + books.size());
         System.out.println("\n");
 
@@ -384,11 +384,51 @@ public class Main {
 
     private void listarTop10LivrosBaixados() {
 
+        System.out.println("Estou buscando os top 10 livros mais baixados do Gutendex...");
+        var json = consumoAPI.obterDados(ENDERECO);
+
+        DadosResultado dadosResultado = converterDados.obterDados(json, DadosResultado.class);
+
+        List<DadosLivro> top10Downloads = dadosResultado.dadosLivro().stream()
+                .limit(10)
+                .toList();
+
+        System.out.println("\n----Top 10 livros mais baixados do Gutendex----");
+        top10Downloads.forEach(System.out::println);
+        System.out.println();
+
         List<Livro> books = livroRepository.findTop10ByOrderByQuantidadeDownloadsDesc();
 
-        books.forEach(System.out::println);
+        int top10 = 10;
 
-        System.out.println();
+        if (!books.isEmpty() && books.size() <= 10) {
+
+            top10 = books.size();
+
+        }
+
+        if (!books.isEmpty()) {
+
+            System.out.println("\n----Top " + top10 + " livros mais baixados do BD----");
+
+            books.forEach(b ->
+
+                    System.out.println(
+                            "\nTitulo: " + b.getTitulo() +
+                                    "\nIdioma: " + ConverterDados.converterAbreviacao(b.getIdioma()) +
+                                    "\nDownloads: " + b.getQuantidadeDownloads()
+
+                    )
+
+            );
+
+            System.out.println();
+
+        } else {
+
+            System.out.println("Sem livros cadastrados.");
+
+        }
 
 
     }

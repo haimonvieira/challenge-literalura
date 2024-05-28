@@ -23,6 +23,4 @@ public interface AutorRepository extends JpaRepository<Autor, Long> {
     @Query("SELECT a FROM Autor a WHERE LOWER(a.nome) = LOWER(:nome)")
     Autor buscarAutor(String nome);
 
-
-
 }

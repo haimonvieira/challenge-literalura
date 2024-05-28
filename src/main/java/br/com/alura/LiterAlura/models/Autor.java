@@ -70,6 +70,6 @@ public class Autor {
         return "Nome: " + nome +
                 "\nNascimento: " + anoNascimento +
                 "\nFalecimento: " + anoFalecimento +
-                "\nLivro: " + livro;
+                "\nLivros: " + livro;
     }
 }
