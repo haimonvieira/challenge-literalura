@@ -8,6 +8,12 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/*
+Quero deixar explicado aqui que não foi mapeado corretamente as entidades, então, por isso não consegui inserir varios
+livros no autor, por mais que está tivesse sido a idéia inicial.
+
+Também percebi que meu código está dificil de entender, vamos dizer que está sujo e muito "longo"
+ */
 @SpringBootApplication
 public class LiterAluraApplication implements CommandLineRunner {
 
@@ -23,7 +29,7 @@ public class LiterAluraApplication implements CommandLineRunner {
 
 
 	@Override
-	public void run(String... args) throws Exception {
+	public void run(String... args){
 
 		Main main = new Main(livroRepository, autorRepository);
 		main.exibirMenu();

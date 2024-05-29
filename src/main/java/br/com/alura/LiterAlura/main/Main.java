@@ -1,5 +1,7 @@
 package br.com.alura.LiterAlura.main;
 
+import br.com.alura.LiterAlura.exception.ErroDeConversaoDeAutor;
+import br.com.alura.LiterAlura.exception.ErroDeConversaoDeLivro;
 import br.com.alura.LiterAlura.models.*;
 import br.com.alura.LiterAlura.repository.AutorRepository;
 import br.com.alura.LiterAlura.repository.LivroRepository;
@@ -15,8 +17,6 @@ public class Main {
     private final String ENDERECO = "https://gutendex.com/books/?";
     private final LivroRepository livroRepository;
     private final AutorRepository autorRepository;
-    private List<Livro> livros = new ArrayList<>();
-    private List<Autor> autores = new ArrayList<>();
     private Optional<Livro> livroExiste;
     private Optional<Autor> autorExiste;
 
@@ -123,6 +123,7 @@ public class Main {
      * Fazer validacoes - FEITO
      */
 
+    //Apenas é inserido a busca do livro para depois ser pesquisado de fato
     private void buscarLivro() {
 
         var pesquisa = "";
@@ -135,6 +136,8 @@ public class Main {
 
     }
 
+    //É feito a pesquisa do livro caso não esteja cadastrado no banco de dados;
+    //Retorna objeto to tipo DadosResultado
     private DadosResultado getDadosLivro(String pesquisa) {
 
         System.out.println("Estou fazendo a pesquisa do seu livro...\n");
@@ -143,13 +146,14 @@ public class Main {
                 pesquisa.replace(" ", "+"));
         System.out.println(json);
 
-
+        //Aqui a IDE diz que é redundante, mas deixei pois deixa mais fácil de entender
         DadosResultado dadosResultado = converterDados.obterDados(json, DadosResultado.class);
 
         return dadosResultado;
 
     }
 
+    //Aqui é transformado o objeto DadosResultado para DadosLivro e DadosAutor
     private void cadastrarLivro(String pesquisa) {
 
         if (pesquisa.isEmpty()) {
@@ -177,7 +181,6 @@ public class Main {
 
                     System.out.println("Autor já existe.");
 
-
                 } else {
 
                     System.out.println("Estou convertendo o livro...");
@@ -187,23 +190,22 @@ public class Main {
                                     l.autores()))
                             .toList();
 
-                    livros = dadosLivros.stream()
-                            .map(Livro::new).toList();
-
                     //Pegando mapeando dadosLivros para DadosAutor
+                    //Acredito que mapeei errado aqui, pois deveria adicionar o livro do Autor,
+                    //deveria ser bidirecional
                     List<DadosAutor> dadosAutores = dadosLivros.stream()
                             .map(d -> new DadosAutor(d.autores().get(0).nome(), d.autores().get(0).anoNascimento(),
                                     d.autores().get(0).anoFalecimento()))
                             .toList();
 
-                    autores = dadosAutores.stream()
-                            .map(Autor::new).toList();
+                    if(!dadosAutores.isEmpty()){
 
-                    if (!livros.isEmpty() && !autores.isEmpty()) {
-
-                        //Inserindo o livro para poder apresentar o nome do livro
-                        autores.get(0).setLivro(livros.get(0));
+                        //Envia os dados de livro e autor para verificar se pode salva-los
                         salvarLivro(dadosLivros, dadosAutores);
+
+                    }else {
+
+                        System.out.println("Não foi possível cadastrar o livro.");
 
                     }
 
@@ -214,30 +216,38 @@ public class Main {
 
     }
 
+    //Aqui é cadastrado o Autor e Livro no banco de dados
     private void salvarLivro(List<DadosLivro> dadosLivros, List<DadosAutor> dadosAutores) {
 
         System.out.println("Estou inserindo no banco de dados...\n");
 
-        Livro livro = new Livro();
-        livro.setTitulo(dadosLivros.get(0).titulo());
-        livro.setIdioma(dadosLivros.get(0).idiomas().get(0));
-        livro.setQuantidadeDownloads(dadosLivros.get(0).quantidadeDownloads());
+        try {
+            Livro livro = new Livro();
+            livro.setTitulo(dadosLivros.get(0).titulo());
+            livro.setIdioma(dadosLivros.get(0).idiomas().get(0));
+            livro.setQuantidadeDownloads(dadosLivros.get(0).quantidadeDownloads());
 
-        Autor autor = new Autor();
-        autor.setNome(dadosAutores.get(0).nome());
-        autor.setAnoFalecimento(dadosAutores.get(0).anoFalecimento());
-        autor.setAnoNascimento(dadosAutores.get(0).anoNascimento());
-        autor.setLivro(livro);
+            Autor autor = new Autor();
+            autor.setNome(dadosAutores.get(0).nome());
+            autor.setAnoFalecimento(dadosAutores.get(0).anoFalecimento());
+            autor.setAnoNascimento(dadosAutores.get(0).anoNascimento());
+            autor.setLivro(livro);
 
-        //Salvando Livro e Autor no banco de dados
-        livroRepository.save(livro);
-        autorRepository.save(autor);
+            //Salvando Livro e Autor no banco de dados
+            livroRepository.save(livro);
+            autorRepository.save(autor);
+        }catch (ErroDeConversaoDeLivro | ErroDeConversaoDeAutor e){
 
+            System.out.println("Houve um erro ao inserir o livro ou o autor no BD: '");
+            System.out.println(e.getMessage() + "'");
+
+        }
 
         System.out.println("\nLivro cadastrado com sucesso!\n");
 
     }
 
+    //Lista somente os livros
     private void listarLivrosCadastrados() {
 
         List<Livro> books = livroRepository.findAll();
@@ -260,6 +270,7 @@ public class Main {
 
     }
 
+    //Lista somente os autores
     private void listarAutores() {
 
         List<Autor> autors = autorRepository.findAll();
@@ -288,6 +299,7 @@ public class Main {
 
     }
 
+    //Lista autores vivos até um ano determinado
     private void listarAutoresDeUmDeterminadoAno() {
 
         System.out.println("Insira o ano para buscar");
@@ -308,6 +320,10 @@ public class Main {
 
     }
 
+    //Lista e conta os livros de um determinado idioma
+    //O usuário pode digitar a lingua por extendo ou abreviada ou um trecho dela
+    //mas caso seja por extenso, tem de ser sem acentos, pois não foi tratado o idioma
+    //com acentos
     private void listarLivrosDeUmDeterminadoIdioma() {
 
         System.out.println("Insira o idioma (abreviado ou completo)");
@@ -328,6 +344,7 @@ public class Main {
 
     }
 
+    //Busca o livro pelo titulo
     private void buscarLivroPorTitulo() {
 
         System.out.println("Insira o titulo que deseja buscar no BD");
@@ -361,6 +378,7 @@ public class Main {
 
     }
 
+    //Busca o autor pelo nome
     private void buscarAutor() {
 
         System.out.println("Insira o nome do autor");
@@ -386,6 +404,7 @@ public class Main {
 
     }
 
+    //Lista os top 10 da API e os top 'x' do BD
     private void listarTop10LivrosBaixados() {
 
         System.out.println("Estou buscando os top 10 livros mais baixados do Gutendex...");
@@ -446,6 +465,8 @@ public class Main {
 
     }
 
+    //Deletar os registros dos livros e autores;
+    //Porém, não reseta os id's
     private void deletarTudo() {
 
         System.out.println("Tem certeza que deseja deletar todos os livros e autores? (S/N)");
